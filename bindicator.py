@@ -10,6 +10,7 @@
 # bindf = the data from bindicatordata in a dataframe
 # redbinstatus, yellowbinstatus, greenbinstatus = whether it is bin day for each bin
 # logger, file_handler, formatter = standard bits for logging
+# button_callback = what to do when button pressed
 
 import RPi.GPIO as GPIO
 import time
@@ -17,6 +18,7 @@ import logging
 import pandas as pd
 import gspread
 import datetime
+import sys 
 from datetime import date
 from oauth2client.service_account import ServiceAccountCredentials
 gc = gspread.service_account(filename='bindicatorservicekey.json')
@@ -96,12 +98,12 @@ GPIO.setup(14,GPIO.OUT) # Red LED
 GPIO.setup(15,GPIO.OUT) # Yellow LED
 GPIO.setup(18,GPIO.OUT) # Green LED
 GPIO.setup(23,GPIO.OUT) # LED on button
-# COMMENT OUT FOR TESTING GPIO.setup(25,GPIO.IN,pull_up_down=GPIO.PUD_UP) # Button switch
+GPIO.setup(25,GPIO.IN,pull_up_down=GPIO.PUD_UP) # Button switch
 
 # Lights testing sequence -  not necessary for bindication
 
 GPIO.output(14,GPIO.HIGH) # Turns the light connected to pin 14 on
-time.sleep(0.5) # Waits for a half-second
+time.sleep(0.5) # Waits for a half-second3
 GPIO.output(14,GPIO.LOW) # Turns the light connected to pin 14 off
 time.sleep(0.5)
 GPIO.output(15,GPIO.HIGH)
@@ -116,6 +118,17 @@ GPIO.output(23,GPIO.HIGH)
 time.sleep(0.5)
 GPIO.output(23,GPIO.LOW)
 time.sleep(0.5)
+
+# NEW - Define what button does when pressed
+
+def button_callback(channel):
+ GPIO.output(14,GPIO.LOW) 
+ GPIO.output(15,GPIO.LOW)
+ GPIO.output(18,GPIO.LOW)
+ GPIO.output(23,GPIO.LOW)
+ print('Lights out.')
+ GPIO.cleanup()
+ sys.exit()
 
 # Set lights on/off based on bin statuses
 
@@ -138,9 +151,7 @@ if greenbinstatus == 'TRUE':
 else:
  print('Keep the green bin in.')
 
-# GPIO.wait_for_edge(25,GPIO.FALLING,timeout=5000) # Add something here to close this out if nothing turned off by midnight.
-# GPIO.output(14,GPIO.LOW)
-# GPIO.output(15,GPIO.LOW)
-# GPIO.output(18,GPIO.LOW)
-# GPIO.output(23,GPIO.LOW)
-# print('Bins out, lights off!')
+# NEW - Prepare the button for pushing and add a message to display in terminal.
+
+GPIO.add_event_detect(25,GPIO.RISING,callback=button_callback) 
+message = input("Press Enter to quit.\n")
