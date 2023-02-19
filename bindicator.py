@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 # The script checks if today is bin day for each of three bins and sets LEDs on if so (via cron job at 16:00 WST)
+# The script should be run as a service (bindicator.service) to allow off-button to remain working when not SSH'd in; setting full path for gc filename prevents error when service runs. 
 # Another script (bindicatoroff.py) will run via a cron job at 23:59 WST each day and set all the LEDs to off
 
 # VARIABLES
@@ -21,7 +22,7 @@ import datetime
 import sys 
 from datetime import date
 from oauth2client.service_account import ServiceAccountCredentials
-gc = gspread.service_account(filename='bindicatorservicekey.json')
+gc = gspread.service_account(filename='/usr/scripts/bindicator/bindicatorservicekey.json')
 
 # Get or create a logger
 
@@ -119,7 +120,7 @@ time.sleep(0.5)
 GPIO.output(23,GPIO.LOW)
 time.sleep(0.5)
 
-# NEW - Define what button does when pressed
+# Define what button does when pressed
 
 def button_callback(channel):
  GPIO.output(14,GPIO.LOW) 
@@ -151,7 +152,12 @@ if greenbinstatus == 'TRUE':
 else:
  print('Keep the green bin in.')
 
-# NEW - Prepare the button for pushing and add a message to display in terminal.
+# Prepare the button for pushing.
 
 GPIO.add_event_detect(25,GPIO.RISING,callback=button_callback) 
-message = input("Press Enter to quit.\n")
+
+try:
+ while True : pass
+except:
+ GPIO.cleanup()
+
