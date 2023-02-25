@@ -1,6 +1,8 @@
-About bindicator
+# About bindicator
 
 Electronics project with light-up mini-bins to show which rubbish bins to put on the kerb each week.
+
+# Setting up bindicator to run daily
 
 This can be configured to run as a service, triggered by a cron job that checks whether it is bin night daily, and turns the lights off at midnight if they have not already been turned off manually using a button.
 
