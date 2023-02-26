@@ -18,7 +18,7 @@ After=multi-user.target
 
 [Service]
 Type=idle
-ExecStart=/usr/scripts/bindicator/ && /usr/bin/python /usr/scripts/bindicator/bindicator.py  >> /usr/scripts/bindicator/crontestbindicator.txt  2>&1
+ExecStart=/usr/scripts/bindicator/bindicator.py  >> /usr/scripts/bindicator/crontestbindicator.txt  2>&1
 User=root
 
 [Install]
@@ -28,6 +28,10 @@ Set permissions:
 sudo chmod 644 /lib/systemd/system/bindicator.service
 
 Set up the cron jobs by adding the following to crontab (these run the service to check whether it is bin night, light up the appropriate LEDs and the button LED if so, and turn off any lights that are still on at midnight):
+
+58 15 * * * systemctl stop bindicator.service
+
+59 15 * * * systemctl daemon-reload
 
 00 16 * * * systemctl start bindicator.service
 
