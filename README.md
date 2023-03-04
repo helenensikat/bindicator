@@ -8,33 +8,43 @@ This can be configured to run as a service, triggered by a cron job that checks 
 
 The following assumes the path for bindicator.py is /usr/scripts/bindicator/bindicator.py and the path for bindicatoroff.py is /usr/scripts/bindicator/bindicatoroff.py
 
+In this case the user is 'bindicator', created for working on this project.  If you create a new user, remember to add them to the GPIO group:
+
+sudo adduser pi gpio
+
 Create the service here: /lib/systemd/system/bindicator.service
 
 Content for bindicator.service:
 
 [Unit]
 Description=Bindicator Service
-After=multi-user.target
+After=multi-target.target
 
 [Service]
-Type=idle
-ExecStart=/usr/scripts/bindicator/bindicator.py  >> /usr/scripts/bindicator/crontestbindicator.txt  2>&1
-User=root
+Type=simple
+ExecStart=/usr/scripts/bindicator/bindicator.py
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=multi-target.target
 
 Set permissions:
 sudo chmod 644 /lib/systemd/system/bindicator.service
 
-Set up the cron jobs by adding the following to crontab (these run the service to check whether it is bin night, light up the appropriate LEDs and the button LED if so, and turn off any lights that are still on at midnight):
+Set up the cron jobs by adding the following to crontab (these run the service to check at 4pm whether it is bin night, light up the appropriate LEDs and the button LED if so, and turn off any lights that are still on at midnight):
 
-58 15 * * * systemctl stop bindicator.service
+58 15 * * * sudo systemctl stop bindicator.service
 
-59 15 * * * systemctl daemon-reload
+59 15 * * * sudo systemctl daemon-reload
 
-00 16 * * * systemctl start bindicator.service
+00 16 * * * sudo systemctl start bindicator.service
 
-58 23 * * * systemctl stop bindicator.service
+58 23 * * * sudo systemctl stop bindicator.service
 
 59 23 * * * cd /usr/scripts/bindicator/ && /usr/bin/python /usr/scripts/bindicator/bindicatoroff.py
+
+Lastly, the systemctl cron jobs won't run without a sudo password, but this can be resolved as follows (assuming they are being run by user 'pi' when the cron jobs trigger:
+
+Run 'sudo visudo' then add this line to the file: 
+pi ALL=NOPASSWD:/usr/bin/systemctl start bindicator.service,/usr/bin/systemctl stop bindicator.service,usr/bin/systemctl daemon-reload
+
+
