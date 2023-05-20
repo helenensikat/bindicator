@@ -1,44 +1,38 @@
 #!/usr/bin/python
 
-# Cron job runs every day at 11:59 WST to turn all the lights off. 
+# CONTEXT
 
-import RPi.GPIO as GPIO
+# Should be triggered via a cron job every day at 11:59 WST to turn all the lights off. 
+
+# CODE
+
+# Import libraries
+
+from gpiozero import LED
 import logging
+import sys
 
-# Get or create a logger
+# Define devices associated with pins
 
-logger = logging.getLogger(__name__)
+redled = LED(14)
+yellowled = LED(15)
+greenled = LED(18)
+buttonled = LED(23)
 
-# Set log level
+# Set up logging
 
-logger.setLevel(logging.INFO)
-
-# Define file handler and set formatter for logging
-
-file_handler = logging.FileHandler('bindicator.log')
+logger = logging.getLogger(__name__) # Get or create a logger
+logger.setLevel(logging.INFO) # Set log level
+file_handler = logging.FileHandler('bindicator.log') # 3 lines define file handler and set formatter for logging
 formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
 file_handler.setFormatter(formatter)
+logger.addHandler(file_handler) # Add file handler to logger
+logger.info('bindcatoroff.py ran - goodnight!') # Output to logger
 
-# Add file handler to logger
+# Turn all the lights off and exit script
 
-logger.addHandler(file_handler)
-
-# Logs
-
-logger.info('bindcatoroff.py ran - goodnight!')
-
-# Setting things up to do stuff with the lights on each pin
-
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False) # Is there a need for this line?
-GPIO.setup(14,GPIO.OUT) # Red LED
-GPIO.setup(15,GPIO.OUT) # Yellow LED
-GPIO.setup(18,GPIO.OUT) # Green LED
-GPIO.setup(23,GPIO.OUT) # LED button
-
-# Turn all the lights off
-
-GPIO.output(14,GPIO.LOW)
-GPIO.output(15,GPIO.LOW)
-GPIO.output(18,GPIO.LOW)
-GPIO.output(23,GPIO.LOW)
+redled.off()
+yellowled.off()
+greenled.off()
+buttonled.off()
+sys.exit()

@@ -1,80 +1,72 @@
 #!/usr/bin/python
 
-# The script checks if today is bin day for each of three bins and sets LEDs on if so (via cron job at 16:00 WST)
-# The script should be run as a service (bindicator.service) to allow off-button to remain working when not SSH'd in; setting full path for gc filename prevents error when service runs. 
-# Another script (bindicatoroff.py) will run via a cron job at 23:59 WST each day and set all the LEDs to off
+# CONTEXT
+
+# The script checks if today is bin day for each of three bins and sets LEDs on if so.
+# The script should be run as a service (bindicator.service) at 16:00 WST to allow off-button to remain working when not SSH'd in; setting full path for gc filename prevents error when service runs. 
+# Another script (bindicatoroff.py) should be triggered via a cron job at 23:59 WST each day and set all the LEDs to off
 
 # VARIABLES
+
 # todaysdate = a YYYY-MM-DD string of the current date
 # weekday = the day of the week when bindicator.py runs
 # bindicatordata = data from the google sheet with bin days in it
 # bindf = the data from bindicatordata in a dataframe
 # redbinstatus, yellowbinstatus, greenbinstatus = whether it is bin day for each bin
 # logger, file_handler, formatter = standard bits for logging
-# button_callback = what to do when button pressed
 
-import RPi.GPIO as GPIO
-import time
-import logging
+# CODE
+
+# Import libraries
+
+from gpiozero import Button
+from gpiozero import LED
+from signal import pause
+from time import sleep
 import pandas as pd
 import gspread
-import datetime
-import sys 
+import logging
 from datetime import date
+import sys
 from oauth2client.service_account import ServiceAccountCredentials
 gc = gspread.service_account(filename='/usr/scripts/bindicator/bindicatorservicekey.json')
 
-# Get or create a logger
+# Define devices associated with pins
 
-logger = logging.getLogger(__name__)
+redled = LED(14)
+yellowled = LED(15)
+greenled = LED(18)
+buttonled = LED(23)
+binbutton = Button(25)
 
-# Set log level
+# Set up logging
 
-logger.setLevel(logging.INFO)
-
-# Define file handler and set formatter for logging
-
-file_handler = logging.FileHandler('bindicator.log')
+logger = logging.getLogger(__name__) # Get or create a logger
+logger.setLevel(logging.INFO) # Set log level
+file_handler = logging.FileHandler('bindicator.log')  # 3 lines define file handler and set formatter for logging
 formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
 file_handler.setFormatter(formatter)
+logger.addHandler(file_handler) # Add file handler to logger
+logger.info('bindcator.py initiated - all hail bindicator.py') # Output to logger
 
-# Add file handler to logger
-
-logger.addHandler(file_handler)
-
-# Logs
-
-logger.info('bindcator.py initiated - all hail bindicator.py')
-
-# Access bindicator sheet on google
+# Get data from bindicator sheet on Google Drive
 
 gsheet = gc.open_by_url("https://docs.google.com/spreadsheets/d/1w2VzPjnQ2k-FKyZGZmNUijXnHCxcwxZbzztjAkefI1U/edit#gid=0")
+bindicatordata = gsheet.sheet1.get_all_records() # Get bindicator data from google sheet and test by printing google sheet content
+print(bindicatordata) # Diagnostics
+bindf= pd.DataFrame(bindicatordata) # Convert bindicator data from the google sheet to a dataframe
+print(bindf) # Diagnostics
 
-# Get bindicator data from google sheet and test by printing google sheet content
-
-bindicatordata = gsheet.sheet1.get_all_records()
-print(bindicatordata) # Not necessary for bindication
-
-# Convert  bindicator data from the google sheet to a dataframe
-
-bindf= pd.DataFrame(bindicatordata)
-print(bindf)
-
-# Grab today's date in a pandas-friendly fashion
-## For testing, comment out the first line and replace with:
-## todaysdate = pd.Timestamp('2021-06-15').strftime('%Y-%m-%d')
+# Grab today's date in a pandas-friendly fashion and print it and the day of the week for diagnostics
 
 todaysdate = pd.Timestamp.today().strftime('%Y-%m-%d') # Pandas is picky with date formatting - this returns it in a useable form
 print('The date today is:')
 print(todaysdate)
-
-# Tell us what day of the week it is - not necessary for bindication
-
 print('Today is a:')
 weekday = bindf.at[bindf.loc[bindf['date'] == todaysdate].index[0],'weekday']
 print(weekday)
 
-# Now check today's bin statuses and print them
+# Check today's bin statuses and print them for diagnostics
 
 redbinstatus = bindf.at[bindf.loc[bindf['date'] == todaysdate].index[0],'redbin'] # Looks up the position of today's date in the 'date' column and finds the value in the equivalent row  of the 'redbin' column
 yellowbinstatus = bindf.at[bindf.loc[bindf['date'] == todaysdate].index[0],'yellowbin']
@@ -86,78 +78,64 @@ print(yellowbinstatus)
 print('Is it green bin night?')
 print(greenbinstatus)
 
-# Logging what happened above
+# Log what happened when today's bin statuses were checked
 
 logger.info('Date was ' + str(todaysdate) + '; day was ' + str(weekday) + '; redbin=' + str(redbinstatus) + '; yellowbin=' + str(yellowbinstatus) + ' greenbin=' + str(greenbinstatus) + '.')
 
-# Let's set the lights and button up - code gets the lights and button connected to each pin ready to do stuff
-
-button = 25
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False) # Is this actually needed?
-GPIO.setup(14,GPIO.OUT) # Red LED
-GPIO.setup(15,GPIO.OUT) # Yellow LED
-GPIO.setup(18,GPIO.OUT) # Green LED
-GPIO.setup(23,GPIO.OUT) # LED on button
-GPIO.setup(25,GPIO.IN,pull_up_down=GPIO.PUD_UP) # Button switch
-
 # Lights testing sequence -  not necessary for bindication
 
-GPIO.output(14,GPIO.HIGH) # Turns the light connected to pin 14 on
-time.sleep(0.5) # Waits for a half-second3
-GPIO.output(14,GPIO.LOW) # Turns the light connected to pin 14 off
-time.sleep(0.5)
-GPIO.output(15,GPIO.HIGH)
-time.sleep(0.5)
-GPIO.output(15,GPIO.LOW)
-time.sleep(0.5)
-GPIO.output(18,GPIO.HIGH)
-time.sleep(0.5)
-GPIO.output(18,GPIO.LOW)
-time.sleep(0.5)
-GPIO.output(23,GPIO.HIGH)
-time.sleep(0.5)
-GPIO.output(23,GPIO.LOW)
-time.sleep(0.5)
+redled.on() # Turns the LED on the red bin on
+sleep(0.5) # Waits for a half-second
+redled.off() # Turns the LED on the red bin off
+sleep(0.5)
+yellowled.on()
+sleep(0.5)
+yellowled.off()
+sleep(0.5)
+greenled.on()
+sleep(0.5)
+greenled.off()
+sleep(0.5)
+buttonled.on()
+sleep(0.5)
+buttonled.off()
+sleep(0.5)
 
-# Define what button does when pressed
-
-def button_callback(channel):
- GPIO.output(14,GPIO.LOW) 
- GPIO.output(15,GPIO.LOW)
- GPIO.output(18,GPIO.LOW)
- GPIO.output(23,GPIO.LOW)
- print('Lights out.')
- GPIO.cleanup()
- sys.exit()
-
-# Set lights on/off based on bin statuses
+# Set lights on/off based on bin statuses, and print a message about what to do with each bin
 
 if redbinstatus == 'TRUE':
- GPIO.output(14,GPIO.HIGH)
+ redled.on()
  print('Put the red bin out.')
 else:
  print('Keep the red bin in.')
 
 if yellowbinstatus == 'TRUE':
- GPIO.output(15,GPIO.HIGH)
+ yellowled.on()
  print('Put the yellow bin out.')
 else:
  print('Keep the yellow bin in.')
 
 if greenbinstatus == 'TRUE':
- GPIO.output(18,GPIO.HIGH)
- GPIO.output(23,GPIO.HIGH) # No need to do the button separately because green bin always goes out and the button always lights up.
+ greenled.on()
+ buttonled.on() # No need to do the button separately because green bin always goes out and the button always lights up
  print('Put the green bin out.')
 else:
  print('Keep the green bin in.')
 
-# Prepare the button for pushing.
+# Exit script if no bins are going out tonight
 
-GPIO.add_event_detect(25,GPIO.RISING,callback=button_callback) 
+if greenbinstatus == 'FALSE' and yellowbinstatus == 'FALSE' and greenbinstatus == 'FALSE':
+    sys.exit()
 
-try:
- while True : pass
-except:
- GPIO.cleanup()
+# Detect when button is double-pressed, turn off all lights, and exit script
 
+while True:
+        binbutton.wait_for_press()
+        binbutton.wait_for_release()
+        if binbutton.wait_for_press(timeout=0.6):
+                redled.off()
+                yellowled.off()
+                greenled.off()
+                buttonled.off()
+                print('Lights out.') # Diagnostics
+                sys.exit()
