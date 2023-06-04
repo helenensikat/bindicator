@@ -2,6 +2,8 @@
 
 Electronics project with light-up mini-bins to show which rubbish bins to put on the kerb each week.
 
+![Bindication happening IRL](https://github.com/helenensikat/bindicator/blob/main/Image.png)
+
 # Setting up bindicator to run daily
 
 This can be configured to run as a service and a timer to check whether it is bin night each afteroon; currently being lazy and using a cron job to lights off at midnight if they have not already been turned off manually using a button.
